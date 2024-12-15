@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ball Power - Don't Gamble Don't Lose the Power!</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(to bottom, #1e3c72, #2a5298);
+            color: white;
+            text-align: center;
+            padding: 20px;
+        }
+
+        h1 {
+            font-size: 3em;
+            margin-bottom: 20px;
+            text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.8);
+            cursor: pointer;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .ball-container {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 30px auto;
+        }
+
+        .ball {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background-color: #ffcc00;
+            color: black;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5em;
+            box-shadow: 3px 3px 12px rgba(0, 0, 0, 0.6);
+        }
+
+        .selected-numbers {
+            margin: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .white-ball {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: white;
+            color: black;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.2em;
+            box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.5);
+        }
+
+        .white-ball.red {
+            background-color: red;
+            color: white;
+        }
+
+        .number-pad {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            gap: 10px;
+            margin: 20px auto;
+            max-width: 600px;
+        }
+
+        .number-pad button {
+            font-size: 1.5em;
+            padding: 15px;
+            background-color: #1e90ff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.5);
+        }
+
+        .number-pad button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+
+        .controls {
+            margin-top: 20px;
+        }
+
+        .controls button {
+            font-size: 1.5em;
+            padding: 10px 30px;
+            margin: 10px;
+            cursor: pointer;
+            background-color: #ff4500;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            box-shadow: 3px 3px 10px rgba(0, 0, 0, 0.6);
+        }
+
+        .funds {
+            margin-top: 20px;
+            font-size: 1.5em;
+        }
+
+        .results {
+            margin-top: 30px;
+            font-size: 1.8em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 onclick="activateCheat()">Don't Gamble Don't Lose the Power!</h1>
+        <h2>Ball Power</h2>
+
+        <div class="ball-container" id="winningNumbers">
+            <div class="ball">?</div>
+            <div class="ball">?</div>
+            <div class="ball">?</div>
+            <div class="ball">?</div>
+            <div class="ball">?</div>
+            <div class="ball">?</div>
+        </div>
+
+        <div class="selected-numbers" id="selectedNumbers"></div>
+
+        <div class="number-pad">
+            <!-- Number buttons dynamically generated in JavaScript -->
+        </div>
+
+        <div class="controls">
+            <button onclick="placeOrder()">Place Order</button>
+            <button onclick="drawBalls()">Draw Winning Numbers</button>
+            <button onclick="resetGame()">Play Again</button>
+        </div>
+
+        <div class="funds">
+            Funds: <span id="funds">$0</span>
+        </div>
+
+        <div class="results" id="results"></div>
+    </div>
+
+    <script>
+        const PRIZE_MAP = {
+            5: { withPowerball: 200000000, withoutPowerball: 1000000 },
+            4: { withPowerball: 50000, withoutPowerball: 100 },
+            3: { withPowerball: 100, withoutPowerball: 7 },
+            2: { withPowerball: 7, withoutPowerball: 0 },
+            1: { withPowerball: 4, withoutPowerball: 0 },
+            0: { withPowerball: 4, withoutPowerball: 0 },
+        };
+
+        let selectedNumbers = [];
+        let orders = [];
+        let funds = 0;
+        let cheatActivated = false;
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const numberPad = document.querySelector('.number-pad');
+            for (let i = 1; i <= 69; i++) {
+                const button = document.createElement('button');
+                button.textContent = i;
+                button.onclick = () => selectNumber(i);
+                numberPad.appendChild(button);
+            }
+        });
+
+        function selectNumber(number) {
+            if (selectedNumbers.length >= 6) {
+                alert('You can only select 6 numbers. After placing your order, you can select the next set of numbers.');
+                return;
+            }
+
+            if (selectedNumbers.includes(number)) {
+                alert('Number already selected!');
+                return;
+            }
+
+            selectedNumbers.push(number);
+            updateSelectedNumbers();
+        }
+
+        function updateSelectedNumbers() {
+            const tempRow = document.querySelector('#tempRow');
+            if (tempRow) tempRow.remove();
+
+            const container = document.getElementById('selectedNumbers');
+            const row = document.createElement('div');
+            row.className = 'row';
+            row.id = 'tempRow';
+
+            selectedNumbers.forEach(num => {
+                const ball = document.createElement('div');
+                ball.className = 'white-ball';
+                ball.textContent = num;
+                row.appendChild(ball);
+            });
+
+            container.appendChild(row);
+        }
+
+        function placeOrder() {
+            if (selectedNumbers.length !== 6) {
+                alert('Please select 6 numbers before placing an order.');
+                return;
+            }
+
+            orders.push([...selectedNumbers]);
+
+            const container = document.getElementById('selectedNumbers');
+            const tempRow = document.querySelector('#tempRow');
+            if (tempRow) tempRow.remove();
+
+            const row = document.createElement('div');
+            row.className = 'row';
+
+            selectedNumbers.forEach(num => {
+                const ball = document.createElement('div');
+                ball.className = 'white-ball';
+                ball.textContent = num;
+                row.appendChild(ball);
+            });
+
+            container.appendChild(row);
+
+            funds -= 2;
+            document.getElementById('funds').textContent = `$${funds}`;
+            selectedNumbers = [];
+        }
+
+        function drawBalls() {
+            if (orders.length === 0) {
+                alert('Please place at least one order before drawing numbers.');
+                return;
+            }
+
+            const winningNumbers = cheatActivated
+                ? orders[0].slice(0, 5).concat(orders[0][5])
+                : Array.from({ length: 5 }, () => Math.floor(Math.random() * 69) + 1).concat(Math.floor(Math.random() * 26) + 1);
+
+            const container = document.getElementById('winningNumbers');
+            const results = document.getElementById('results');
+
+            container.querySelectorAll('.ball').forEach((ball, index) => {
+                ball.textContent = winningNumbers[index];
+            });
+
+            let totalPrize = 0;
+
+            orders.forEach(order => {
+                const whiteBallMatches = order.slice(0, 5).filter(num => winningNumbers.slice(0, 5).includes(num)).length;
+                const powerballMatch = order[5] === winningNumbers[5];
+
+                totalPrize += PRIZE_MAP[whiteBallMatches][powerballMatch ? 'withPowerball' : 'withoutPowerball'];
+
+                const rows = document.getElementById('selectedNumbers').querySelectorAll('.row');
+                rows.forEach((row, index) => {
+                    if (index === orders.indexOf(order)) {
+                        row.querySelectorAll('.white-ball').forEach((ball, idx) => {
+                            if (idx < 5 && winningNumbers.slice(0, 5).includes(parseInt(ball.textContent))) {
+                                ball.classList.add('red');
+                            } else if (idx === 5 && parseInt(ball.textContent) === winningNumbers[5]) {
+                                ball.classList.add('red');
+                            }
+                        });
+                    }
+                });
+            });
+
+            funds += totalPrize;
+            document.getElementById('funds').textContent = `$${funds}`;
+            results.textContent = `You won $${totalPrize} in this round!`;
+        }
+
+        function resetGame() {
+            selectedNumbers = [];
+            orders = [];
+
+            document.getElementById('selectedNumbers').innerHTML = '';
+            document.getElementById('results').textContent = '';
+            document.getElementById('winningNumbers').querySelectorAll('.ball').forEach(ball => {
+                ball.textContent = '?';
+            });
+        }
+
+        function activateCheat() {
+            alert('Cheat mode activated! Your first order will win.');
+            cheatActivated = true;
+        }
+    </script>
+</body>
+</html>
